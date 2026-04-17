@@ -1,0 +1,14 @@
+# k8s/configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: leave-app-config
+  namespace: default
+  labels:
+    app: leave-management
+data:
+  DB_HOST: "mysql-service"
+  DB_PORT: "3306"
+  DB_NAME: "leavedb"
+  SPRING_PROFILES_ACTIVE: "prod"
+  JAVA_OPTS: "-Xms256m -Xmx512m -XX:+UseContainerSupport"

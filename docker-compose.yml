@@ -1,0 +1,68 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  # ==========================================
+  # MySQL Database Service
+  # ==========================================
+  mysql:
+    image: mysql:8.0
+    container_name: leave-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: leavedb
+      MYSQL_USER: leaveuser
+      MYSQL_PASSWORD: leavepassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - leave-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ==========================================
+  # Spring Boot Application Service
+  # ==========================================
+  leave-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: leave-management-app
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: leavedb
+      DB_USERNAME: leaveuser
+      DB_PASSWORD: leavepassword
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - leave-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1",
+             "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+networks:
+  leave-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
